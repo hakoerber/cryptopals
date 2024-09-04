@@ -1,0 +1,33 @@
+[package]
+name = "challenge1"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "base64"
+path = "src/bin/base64.rs"
+
+[[bin]]
+name = "guess_key"
+path = "src/bin/guess_key.rs"
+
+[[bin]]
+name = "xor"
+path = "src/bin/xor.rs"
+
+[[bin]]
+name = "break_xor"
+path = "src/bin/break_xor.rs"
+
+[[bin]]
+name = "aes"
+path = "src/bin/aes.rs"
+
+[dependencies.clap]
+version = "4.5.16"
+default-features = false
+features = ["std", "derive", "help", "usage", "error-context"]
