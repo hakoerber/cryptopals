@@ -54,10 +54,11 @@ fn main() -> Result<(), Error> {
 
             let key = decrypt_args.key.as_bytes();
 
-            let key = aes::key::Key::AES128(
-                key.try_into()
-                    .map_err(|_| Error("invalid key size".to_owned()))?,
-            );
+            let key: [u8; 16] = key
+                .try_into()
+                .map_err(|_| Error("invalid key size".to_owned()))?;
+
+            let key = aes::Key128::from_bytes(key);
 
             let decrypted = match decrypt_args.mode {
                 Mode::Ecb => aes::decrypt_ecb(&decoded, key),
