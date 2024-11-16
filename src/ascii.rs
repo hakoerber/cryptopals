@@ -1,6 +1,6 @@
 pub fn from_bytes(input: &[u8]) -> Option<String> {
     input
-        .into_iter()
+        .iter()
         .map(|c| (*c).into())
         .filter_map(|c: char| {
             if c.is_ascii_control() {

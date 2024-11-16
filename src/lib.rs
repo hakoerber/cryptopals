@@ -32,7 +32,7 @@ pub fn xor_string_repeating(data: &str, key: &str) -> String {
     let data = data.as_bytes();
     let key = key.as_bytes();
 
-    let result = xor::xor_repeating(&data, &key);
+    let result = xor::xor_repeating(data, key);
 
     hex::to_str(&result)
 }

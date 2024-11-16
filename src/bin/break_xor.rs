@@ -66,10 +66,10 @@ fn main() -> Result<(), Error> {
         let mut stripes: Vec<Vec<u8>> = vec![vec![]; keysize];
 
         for block in input.chunks(keysize) {
-            for i in 0..keysize {
+            for (i, stripe) in stripes.iter_mut().enumerate().take(keysize) {
                 let block = block.get(i);
                 if let Some(block) = block {
-                    stripes[i].push(*block);
+                    stripe.push(*block);
                 }
             }
         }

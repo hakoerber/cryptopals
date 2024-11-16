@@ -101,7 +101,7 @@ pub fn parse_hex_string(data: &str) -> Result<Vec<u8>, Error> {
 }
 
 pub fn to_str(data: &[u8]) -> String {
-    data.into_iter()
+    data.iter()
         .flat_map(|b| {
             let upper = (b & 0xF0) >> 4;
             let lower = b & 0x0F;

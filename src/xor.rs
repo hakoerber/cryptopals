@@ -15,7 +15,7 @@ pub fn xor_single(data: &[u8], operand: u8) -> Vec<u8> {
 }
 
 pub fn xor_repeating(data: &[u8], key: &[u8]) -> Vec<u8> {
-    assert!(key.len() > 0);
+    assert!(!key.is_empty());
     data.iter()
         .zip(key.iter().cycle())
         .map(|(d1, d2)| d1 ^ d2)
@@ -60,18 +60,15 @@ pub fn guess_single_xor_key<const C: usize>(
     let mut candidates = Vec::new();
 
     for i in 0..=u8::MAX {
-        let result = xor_single(&input, i);
+        let result = xor_single(input, i);
 
-        match ascii::from_bytes(&result) {
-            Some(text) => {
-                let score = scorer(&text);
-                candidates.push(Candidate {
-                    key: i,
-                    text,
-                    score,
-                })
-            }
-            None => (),
+        if let Some(text) = ascii::from_bytes(&result) {
+            let score = scorer(&text);
+            candidates.push(Candidate {
+                key: i,
+                text,
+                score,
+            })
         }
     }
 
