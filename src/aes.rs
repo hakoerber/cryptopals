@@ -17,12 +17,12 @@ mod gf {
     //! In binary, this corresponds to 0b1_0001_1011, 0x11b
 
     pub fn add_word(a: [u8; 4], b: [u8; 4]) -> [u8; 4] {
-        let mut result = [0; 4];
-        result[0] = add(a[0], b[0]);
-        result[1] = add(a[1], b[1]);
-        result[2] = add(a[2], b[2]);
-        result[3] = add(a[3], b[3]);
-        result
+        [
+            add(a[0], b[0]),
+            add(a[1], b[1]),
+            add(a[2], b[2]),
+            add(a[3], b[3]),
+        ]
     }
 
     /// Addition is defined as addition of the polynomial's coefficients modulo 2.
@@ -117,17 +117,12 @@ mod state {
             // └             ┘ └    ┘
             //
             // we compute column * matrix
-            let mut tmp = [0; 4];
-
-            tmp[0] = gf::mult(0x02, self.0[0]) ^ gf::mult(0x03, self.0[1]) ^ self.0[2] ^ self.0[3];
-            tmp[1] = self.0[0] ^ gf::mult(0x02, self.0[1]) ^ gf::mult(0x03, self.0[2]) ^ self.0[3];
-            tmp[2] = self.0[0] ^ self.0[1] ^ gf::mult(0x02, self.0[2]) ^ gf::mult(0x03, self.0[3]);
-            tmp[3] = gf::mult(0x03, self.0[0]) ^ self.0[1] ^ self.0[2] ^ gf::mult(0x02, self.0[3]);
-
-            self.0[0] = tmp[0];
-            self.0[1] = tmp[1];
-            self.0[2] = tmp[2];
-            self.0[3] = tmp[3];
+            self.0 = [
+                gf::mult(0x02, self.0[0]) ^ gf::mult(0x03, self.0[1]) ^ self.0[2] ^ self.0[3],
+                self.0[0] ^ gf::mult(0x02, self.0[1]) ^ gf::mult(0x03, self.0[2]) ^ self.0[3],
+                self.0[0] ^ self.0[1] ^ gf::mult(0x02, self.0[2]) ^ gf::mult(0x03, self.0[3]),
+                gf::mult(0x03, self.0[0]) ^ self.0[1] ^ self.0[2] ^ gf::mult(0x02, self.0[3]),
+            ];
         }
 
         fn inv_mix(&mut self) {
@@ -140,29 +135,24 @@ mod state {
             // └             ┘ └    ┘
             //
             // we compute column * matrix
-            let mut tmp = [0; 4];
-
-            tmp[0] = gf::mult(0x0e, self.0[0])
-                ^ gf::mult(0x0b, self.0[1])
-                ^ gf::mult(0x0d, self.0[2])
-                ^ gf::mult(0x09, self.0[3]);
-            tmp[1] = gf::mult(0x09, self.0[0])
-                ^ gf::mult(0x0e, self.0[1])
-                ^ gf::mult(0x0b, self.0[2])
-                ^ gf::mult(0x0d, self.0[3]);
-            tmp[2] = gf::mult(0x0d, self.0[0])
-                ^ gf::mult(0x09, self.0[1])
-                ^ gf::mult(0x0e, self.0[2])
-                ^ gf::mult(0x0b, self.0[3]);
-            tmp[3] = gf::mult(0x0b, self.0[0])
-                ^ gf::mult(0x0d, self.0[1])
-                ^ gf::mult(0x09, self.0[2])
-                ^ gf::mult(0x0e, self.0[3]);
-
-            self.0[0] = tmp[0];
-            self.0[1] = tmp[1];
-            self.0[2] = tmp[2];
-            self.0[3] = tmp[3];
+            self.0 = [
+                gf::mult(0x0e, self.0[0])
+                    ^ gf::mult(0x0b, self.0[1])
+                    ^ gf::mult(0x0d, self.0[2])
+                    ^ gf::mult(0x09, self.0[3]),
+                gf::mult(0x09, self.0[0])
+                    ^ gf::mult(0x0e, self.0[1])
+                    ^ gf::mult(0x0b, self.0[2])
+                    ^ gf::mult(0x0d, self.0[3]),
+                gf::mult(0x0d, self.0[0])
+                    ^ gf::mult(0x09, self.0[1])
+                    ^ gf::mult(0x0e, self.0[2])
+                    ^ gf::mult(0x0b, self.0[3]),
+                gf::mult(0x0b, self.0[0])
+                    ^ gf::mult(0x0d, self.0[1])
+                    ^ gf::mult(0x09, self.0[2])
+                    ^ gf::mult(0x0e, self.0[3]),
+            ];
         }
     }
 
@@ -187,9 +177,7 @@ mod state {
         }
 
         fn apply_sbox(&mut self, sbox: [u8; 256]) {
-            for i in 0..self.0.len() {
-                self.0[i] = sbox[self.0[i] as usize]
-            }
+            self.0 = self.0.map(|s| sbox[s as usize]);
         }
 
         pub fn sub_bytes(&mut self) {
@@ -215,14 +203,14 @@ mod state {
             self.0[4 * 2 + 1] = self.0[4 * 3 + 1];
             self.0[4 * 3 + 1] = tmp;
 
-            // row 2 is shifted left by 2 bytes
+            // row 3 is shifted left by 2 bytes
             let (tmp1, tmp2) = (self.0[4 * 0 + 2], self.0[4 * 1 + 2]);
             self.0[4 * 0 + 2] = self.0[4 * 2 + 2];
             self.0[4 * 1 + 2] = self.0[4 * 3 + 2];
             self.0[4 * 2 + 2] = tmp1;
             self.0[4 * 3 + 2] = tmp2;
 
-            // row 3 is shifted left by 3 bytes, or right by 1 byte (which needs fewer tmps)
+            // row 4 is shifted left by 3 bytes, or right by 1 byte (which needs fewer tmps)
             let tmp = self.0[4 * 3 + 3];
             self.0[4 * 3 + 3] = self.0[4 * 2 + 3];
             self.0[4 * 2 + 3] = self.0[4 * 1 + 3];
@@ -245,14 +233,14 @@ mod state {
             self.0[4 * 1 + 1] = self.0[4 * 0 + 1];
             self.0[4 * 0 + 1] = tmp;
 
-            // row 2 is shifted left by 2 bytes
+            // row 3 is shifted left by 2 bytes
             let (tmp1, tmp2) = (self.0[4 * 0 + 2], self.0[4 * 1 + 2]);
             self.0[4 * 0 + 2] = self.0[4 * 2 + 2];
             self.0[4 * 1 + 2] = self.0[4 * 3 + 2];
             self.0[4 * 2 + 2] = tmp1;
             self.0[4 * 3 + 2] = tmp2;
 
-            // row 3 is shifted right by 3 bytes, or left by 1 byte (which needs fewer tmps)
+            // row 4 is shifted right by 3 bytes, or left by 1 byte (which needs fewer tmps)
             let tmp = self.0[4 * 0 + 3];
             self.0[4 * 0 + 3] = self.0[4 * 1 + 3];
             self.0[4 * 1 + 3] = self.0[4 * 2 + 3];
