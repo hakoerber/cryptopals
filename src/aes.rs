@@ -83,12 +83,16 @@ mod gf {
 
 mod state {
     use super::{gf, key::RoundKey, SBOX_DECRYPT, SBOX_ENCRYPT};
-    use std::{fmt, ops};
+    use std::ops;
+
+    #[cfg(test)]
+    use std::fmt;
 
     /// A block is two dimensional, column-major order array.
     #[derive(Clone, PartialEq, Eq)]
     pub struct State([u8; 16]);
 
+    #[cfg(test)]
     impl fmt::Debug for State {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             for row in 0..4 {
@@ -103,7 +107,8 @@ mod state {
         }
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[cfg_attr(test, derive(Debug))]
+    #[derive(PartialEq, Eq)]
     pub struct Column([u8; 4]);
 
     impl Column {
@@ -496,7 +501,10 @@ mod state {
 }
 
 mod key {
-    use std::{fmt, ops::Index};
+    use std::ops::Index;
+
+    #[cfg(test)]
+    use std::fmt;
 
     use super::{gf, SBOX_ENCRYPT};
 
@@ -538,7 +546,8 @@ mod key {
     ($($size:expr),+) => {
         paste::paste! {
             $(
-                #[derive(Debug, PartialEq, Eq)]
+                #[cfg_attr(test, derive(Debug))]
+                #[derive(PartialEq, Eq)]
                 pub struct [<Key $size>]([u8; $size / 8]);
 
                 impl [<Key $size>] {
@@ -568,7 +577,8 @@ mod key {
             )+
 
             $(
-                #[derive(Debug, PartialEq, Eq)]
+                #[cfg_attr(test, derive(Debug))]
+                #[derive(PartialEq, Eq)]
                 pub struct [<RoundKeys $size>]([RoundKey; const { match $size {
                     128 => 11,
                     192 => 13,
@@ -641,6 +651,7 @@ mod key {
         }
     }
 
+    #[cfg(test)]
     impl fmt::Debug for RoundKey {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             for row in 0..4 {
