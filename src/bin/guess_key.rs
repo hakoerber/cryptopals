@@ -29,22 +29,24 @@ struct FileArgs {
     path: String,
 }
 
+#[expect(clippy::print_stdout, reason = "main function")]
 fn main() -> Result<(), Error> {
-    let args = Cli::parse();
     const CANDIDATE_COUNT: usize = 10;
+
+    let args = Cli::parse();
 
     match args.command {
         Commands::Input(args) => {
             let input: Vec<u8> = hex::parse_hex_string(&args.input)?;
             let candidates =
                 xor::guess_single_xor_key::<CANDIDATE_COUNT>(&input, text::score_english_plaintext)
-                    .unwrap();
+                    .expect("did not receive a single candidate");
 
             for candidate in candidates {
                 println!(
                     "| score {:08} | key 0x{:02x} | {}",
                     candidate.score, candidate.key, candidate.text
-                )
+                );
             }
         }
         Commands::File(args) => {
@@ -107,7 +109,7 @@ fn main() -> Result<(), Error> {
                     position.candidate.key,
                     position.line,
                     position.candidate.text
-                )
+                );
             }
         }
     }

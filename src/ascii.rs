@@ -10,8 +10,8 @@ pub fn from_bytes(input: &[u8]) -> Option<String> {
             }
         })
         .inspect(|c| {
-            if let Ok(c) = c {
-                assert!(c.is_ascii())
+            if let Ok(ref c) = *c {
+                assert!(c.is_ascii(), "non-ascii character found");
             }
         })
         .collect::<Result<String, ()>>()

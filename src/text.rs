@@ -10,32 +10,40 @@ pub fn score_english_plaintext(text: &str) -> usize {
 
 pub fn score_english_plaintext_2(text: &str) -> usize {
     // https://en.wikipedia.org/wiki/Letter_frequency
-    let letter_count = text.chars().filter(|c| c.is_ascii_alphabetic()).count();
+    let letter_count = text.chars().filter(char::is_ascii_alphabetic).count();
 
     let frequent_letter_count = text
         .chars()
         .filter(|c| matches!((*c).to_ascii_lowercase(), 'e' | 't' | 'a' | 'o' | 'i' | 'n'))
         .count();
 
-    let symbol_count = text.chars().filter(|c| c.is_ascii_punctuation()).count();
+    let symbol_count = text.chars().filter(char::is_ascii_punctuation).count();
 
-    let control_count = text.chars().filter(|c| c.is_ascii_control()).count();
+    let control_count = text.chars().filter(char::is_ascii_control).count();
 
-    (frequent_letter_count + letter_count)
+    frequent_letter_count
+        .checked_add(letter_count)
+        .expect("usize overflow")
         .saturating_sub(symbol_count)
-        .saturating_sub(control_count * 100)
+        .saturating_sub(control_count.checked_add(100).expect("usize overflow"))
 }
 
 pub fn hamming_bits(t1: &[u8], t2: &[u8]) -> usize {
-    assert_eq!(t1.len(), t2.len());
+    assert_eq!(t1.len(), t2.len(), "t1 and t2 have to be the same size");
 
     t1.iter()
         .zip(t2.iter())
         .map(|(b1, b2)| {
             let mut diffs = 0;
-            for i in 0..8 {
+            for i in 0..8_u8 {
                 if 0x01 & (b1 >> i) != 0x01 & (b2 >> i) {
-                    diffs += 1;
+                    #[expect(
+                        clippy::arithmetic_side_effects,
+                        reason = "usize cannot overflow as the loop iterates a max of 8 times"
+                    )]
+                    {
+                        diffs += 1;
+                    }
                 }
             }
             diffs

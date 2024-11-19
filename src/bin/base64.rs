@@ -11,6 +11,7 @@ struct Args {
     hex: bool,
 }
 
+#[expect(clippy::print_stdout, reason = "main function")]
 fn main() -> Result<(), Error> {
     let args = Args::parse();
 

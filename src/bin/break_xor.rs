@@ -11,12 +11,12 @@ struct Cli {
     base64_path: String,
 }
 
+#[expect(clippy::print_stdout, reason = "main function")]
+#[expect(clippy::use_debug, reason = "debug output is just for debug logging")]
 fn main() -> Result<(), Error> {
     const ANALYZE_CHUNK_DISTANCES: usize = 5;
     const KEYSIZE_RANGE: RangeInclusive<usize> = 2..=50;
     const SELECT_KEYSIZE_COUNT: usize = 4;
-
-    let args = Cli::parse();
 
     #[derive(Debug, PartialOrd, PartialEq)]
     struct KeysizeCandidate {
@@ -24,11 +24,47 @@ fn main() -> Result<(), Error> {
         keysize: usize,
     }
 
+    let args = Cli::parse();
+
     let mut keysize_candidates = Vec::new();
 
     let input = fs::read_to_string(args.base64_path)?;
     let input = base64::decode_str(&input)?;
 
+    assert!(
+        input.len()
+            >= (ANALYZE_CHUNK_DISTANCES
+                .checked_add(2)
+                .expect("ANALYZE_CHUNK_DISTANCES too large"))
+            .checked_mul(*KEYSIZE_RANGE.end())
+            .expect("constants too big"),
+        "input too short for analysis"
+    );
+
+    #[expect(clippy::assertions_on_constants, reason = "they may change")]
+    {
+        assert!(
+            ANALYZE_CHUNK_DISTANCES < usize::MAX - 2,
+            "ANALYZE_CHUNK_DISTANCES too large"
+        );
+    }
+
+    assert!(*KEYSIZE_RANGE.end() < usize::MAX, "KEYSIZE_RANGE too large");
+
+    #[expect(
+        clippy::float_arithmetic,
+        clippy::cast_precision_loss,
+        clippy::as_conversions,
+        reason = "the float ops do not have to be precise"
+    )]
+    #[expect(
+        clippy::indexing_slicing,
+        reason = "checked for input being long enough above"
+    )]
+    #[expect(
+        clippy::arithmetic_side_effects,
+        reason = "checked for proper values of the constants above"
+    )]
     for keysize in KEYSIZE_RANGE {
         let mut hamming_distance = 0.0;
         for i in 0..ANALYZE_CHUNK_DISTANCES {
@@ -44,18 +80,22 @@ fn main() -> Result<(), Error> {
         keysize_candidates.push(KeysizeCandidate {
             hamming_distance,
             keysize,
-        })
+        });
     }
 
-    keysize_candidates.sort_by(|a, b| a.hamming_distance.partial_cmp(&b.hamming_distance).unwrap());
+    keysize_candidates.sort_by(|a, b| {
+        a.hamming_distance
+            .partial_cmp(&b.hamming_distance)
+            .expect("none of those values are NaN")
+    });
     let keysize_candidates: Vec<KeysizeCandidate> = keysize_candidates
         .into_iter()
         .take(SELECT_KEYSIZE_COUNT)
         .collect();
 
     println!("most promising keysize candidates:");
-    for candidate in keysize_candidates.iter() {
-        println!("{:?}", candidate);
+    for candidate in &keysize_candidates {
+        println!("{candidate:?}");
     }
 
     for candidate in keysize_candidates.iter().take(SELECT_KEYSIZE_COUNT) {
@@ -78,17 +118,22 @@ fn main() -> Result<(), Error> {
 
         for stripe in stripes {
             let best_candidate =
-                xor::guess_single_xor_key::<1>(&stripe, text::score_english_plaintext).unwrap()[0]
+                xor::guess_single_xor_key::<1>(&stripe, text::score_english_plaintext)
+                    .expect("received not a single candidate")[0]
                     .clone();
 
             key.push(best_candidate.key);
         }
 
-        println!("key {} looks good", String::from_utf8(key.clone()).unwrap());
+        println!(
+            "key {} looks good",
+            String::from_utf8(key.clone()).expect("received non-utf8 xored output")
+        );
         println!("{}", ".".repeat(100));
-        let mut cleartext = String::from_utf8(xor::xor_repeating(&input, &key)).unwrap();
+        let mut cleartext = String::from_utf8(xor::xor_repeating(&input, &key))
+            .expect("received non-utf8 xored output");
         cleartext.truncate(500);
-        println!("{}", cleartext);
+        println!("{cleartext}");
     }
 
     Ok(())

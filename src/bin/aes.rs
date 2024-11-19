@@ -41,6 +41,7 @@ struct DecryptArgs {
     mode: Mode,
 }
 
+#[expect(clippy::print_stdout, reason = "main function")]
 fn main() -> Result<(), Error> {
     let args = Cli::parse();
 
@@ -56,7 +57,7 @@ fn main() -> Result<(), Error> {
 
             let key: [u8; 16] = key
                 .try_into()
-                .map_err(|_| Error("invalid key size".to_owned()))?;
+                .map_err(|_e| Error("invalid key size".to_owned()))?;
 
             let key = aes::Key128::from_bytes(key);
 
@@ -64,7 +65,10 @@ fn main() -> Result<(), Error> {
                 Mode::Ecb => aes::decrypt_ecb(&decoded, key),
             };
 
-            println!("{}", String::from_utf8(decrypted).unwrap());
+            println!(
+                "{}",
+                String::from_utf8(decrypted).expect("decryption produced invalid utf-8")
+            );
         }
     }
 

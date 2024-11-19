@@ -88,6 +88,16 @@ impl TryFrom<char> for HexChar {
 }
 
 pub fn parse_hex_string(data: &str) -> Result<Vec<u8>, Error> {
+    #[expect(
+        clippy::indexing_slicing,
+        clippy::missing_asserts_for_indexing,
+        reason = "we match against len(), the compiler should be able to figure it out"
+    )]
+    #[expect(
+        clippy::arithmetic_side_effects,
+        clippy::as_conversions,
+        reason = "HexChar max value is 15, so the calculation cannot overflow a u8"
+    )]
     data.chars()
         .map(|c| -> Result<HexChar, _> { c.try_into() })
         .collect::<Result<Vec<HexChar>, Error>>()?
@@ -103,11 +113,15 @@ pub fn parse_hex_string(data: &str) -> Result<Vec<u8>, Error> {
 pub fn to_str(data: &[u8]) -> String {
     data.iter()
         .flat_map(|b| {
-            let upper = (b & 0xF0) >> 4;
+            let upper = (b & 0xF0) >> 4_u8;
             let lower = b & 0x0F;
 
-            let upper: HexChar = upper.try_into().unwrap();
-            let lower: HexChar = lower.try_into().unwrap();
+            let upper: HexChar = upper
+                .try_into()
+                .expect("the calculations always produce valid hexchar values");
+            let lower: HexChar = lower
+                .try_into()
+                .expect("the calculations always produce valid hexchar values");
 
             [upper, lower]
         })

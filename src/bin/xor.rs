@@ -32,6 +32,7 @@ struct FileArgs {
     path: String,
 }
 
+#[expect(clippy::print_stdout, reason = "main function")]
 fn main() -> Result<(), Error> {
     let args = Cli::parse();
 
@@ -44,7 +45,8 @@ fn main() -> Result<(), Error> {
 
     println!(
         "{}",
-        String::from_utf8(xor::xor_repeating(data.as_bytes(), key.as_bytes())).unwrap()
+        String::from_utf8(xor::xor_repeating(data.as_bytes(), key.as_bytes()))
+            .expect("xor produced invalid utf-8")
     );
 
     Ok(())

@@ -10,6 +10,12 @@ impl From<Base64Char> for char {
 }
 
 impl Base64Char {
+    const PLACEHOLDER: char = '=';
+
+    const fn placeholder() -> Self {
+        Self(Self::PLACEHOLDER)
+    }
+
     fn sextet_value(value: char) -> Result<Option<u8>, Error> {
         Ok(match value {
             'A' => Some(0),
@@ -79,14 +85,6 @@ impl Base64Char {
             Self::PLACEHOLDER => None,
             _ => return Err(Error(format!("invalid base64 character: {value}"))),
         })
-    }
-}
-
-impl Base64Char {
-    const PLACEHOLDER: char = '=';
-
-    const fn placeholder() -> Self {
-        Self(Self::PLACEHOLDER)
     }
 
     fn try_from_sextet(value: u8) -> Result<Self, Error> {
@@ -160,7 +158,13 @@ impl Base64Char {
     }
 }
 
-#[allow(clippy::identity_op, clippy::eq_op)]
+#[expect(
+    clippy::identity_op,
+    clippy::eq_op,
+    clippy::default_numeric_fallback,
+    clippy::as_conversions,
+    reason = "all bitwise opts, it's fine clippy"
+)]
 fn encode_three_bytes(b1: u8, b2: u8, b3: u8) -> [Base64Char; 4] {
     // easier to operate on a single u32
     let b = u32::from_be_bytes([b1, b2, b3, 0]);
@@ -170,44 +174,61 @@ fn encode_three_bytes(b1: u8, b2: u8, b3: u8) -> [Base64Char; 4] {
     let sextet4 = ((b & 0b0000_0000_0000_0000_0011_1111_0000_0000) >> (8 + (24 - 6 * 4))) as u8;
 
     [
-        Base64Char::try_from_sextet(sextet1).unwrap(),
-        Base64Char::try_from_sextet(sextet2).unwrap(),
-        Base64Char::try_from_sextet(sextet3).unwrap(),
-        Base64Char::try_from_sextet(sextet4).unwrap(),
+        Base64Char::try_from_sextet(sextet1).expect("invalid base64 value"),
+        Base64Char::try_from_sextet(sextet2).expect("invalid base64 value"),
+        Base64Char::try_from_sextet(sextet3).expect("invalid base64 value"),
+        Base64Char::try_from_sextet(sextet4).expect("invalid base64 value"),
     ]
 }
 
-#[allow(clippy::identity_op, clippy::eq_op)]
+#[expect(
+    clippy::identity_op,
+    clippy::default_numeric_fallback,
+    clippy::as_conversions,
+    reason = "all bitwise opts, it's fine clippy"
+)]
 fn encode_two_bytes(b1: u8, b2: u8) -> [Base64Char; 4] {
     // easier to operate on a single u16
     let b = u16::from_be_bytes([b1, b2]);
     let sextet1 = ((b & 0b1111_1100_0000_0000) >> (16 - (6 * 1))) as u8;
     let sextet2 = ((b & 0b0000_0011_1111_0000) >> (16 - (6 * 2))) as u8;
-    #[allow(clippy::cast_possible_truncation)]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "truncation cannot happen, look at the bitmask"
+    )]
     let sextet3 = ((b & 0b0000_0000_0000_1111) << (16_i8 - (6 * 3)).abs()) as u8;
 
     [
-        Base64Char::try_from_sextet(sextet1).unwrap(),
-        Base64Char::try_from_sextet(sextet2).unwrap(),
-        Base64Char::try_from_sextet(sextet3).unwrap(),
+        Base64Char::try_from_sextet(sextet1).expect("invalid base64 value"),
+        Base64Char::try_from_sextet(sextet2).expect("invalid base64 value"),
+        Base64Char::try_from_sextet(sextet3).expect("invalid base64 value"),
         Base64Char::placeholder(),
     ]
 }
 
-#[allow(clippy::identity_op, clippy::eq_op)]
+#[expect(
+    clippy::identity_op,
+    clippy::default_numeric_fallback,
+    reason = "all bitwise opts, it's fine clippy"
+)]
 fn encode_one_byte(b1: u8) -> [Base64Char; 4] {
     let sextet1 = (b1 & 0b1111_1100) >> (8 - (6 * 1));
     let sextet2 = (b1 & 0b0000_0011) << (8_i8 - (6 * 2)).abs();
 
     [
-        Base64Char::try_from_sextet(sextet1).unwrap(),
-        Base64Char::try_from_sextet(sextet2).unwrap(),
+        Base64Char::try_from_sextet(sextet1).expect("invalid base64 value"),
+        Base64Char::try_from_sextet(sextet2).expect("invalid base64 value"),
         Base64Char::placeholder(),
         Base64Char::placeholder(),
     ]
 }
 
 pub fn bytes_to_base64_string(data: &[u8]) -> String {
+    #[expect(
+        clippy::indexing_slicing,
+        clippy::missing_asserts_for_indexing,
+        reason = "we do explicit match against len(), the compiler should be able to figure it out"
+    )]
     data.chunks(3)
         .flat_map(|byte_chunk| match byte_chunk.len() {
             1 => encode_one_byte(byte_chunk[0]),
@@ -223,7 +244,16 @@ pub fn str_to_base64_string(input: &str) -> String {
     bytes_to_base64_string(input.as_bytes())
 }
 
+#[expect(
+    clippy::default_numeric_fallback,
+    reason = "all bitwise opts, it's fine clippy"
+)]
 pub fn decode_str(input: &str) -> Result<Vec<u8>, Error> {
+    #[expect(
+        clippy::indexing_slicing,
+        clippy::missing_asserts_for_indexing,
+        reason = "we check for len() explicitly, the compiler should be able to figure it out"
+    )]
     Ok(input
         .chars()
         .filter(|c| !c.is_whitespace())
@@ -235,9 +265,9 @@ pub fn decode_str(input: &str) -> Result<Vec<u8>, Error> {
             }
 
             let sextet1 = Base64Char::sextet_value(chunk[0])?
-                .ok_or(Error("invalid format, too much padding".to_owned()))?;
+                .ok_or_else(|| Error("invalid format, too much padding".to_owned()))?;
             let sextet2 = Base64Char::sextet_value(chunk[1])?
-                .ok_or(Error("invalid format, too much padding".to_owned()))?;
+                .ok_or_else(|| Error("invalid format, too much padding".to_owned()))?;
             let sextet3 = Base64Char::sextet_value(chunk[2])?;
             let sextet4 = Base64Char::sextet_value(chunk[3])?;
 

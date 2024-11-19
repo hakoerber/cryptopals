@@ -2,20 +2,34 @@ use std::cmp;
 
 use crate::ascii;
 
+#[expect(
+    clippy::indexing_slicing,
+    reason = "we check for same size, so indexing to both is safe"
+)]
+#[expect(
+    clippy::module_name_repetitions,
+    reason = "to keep the operation clear"
+)]
 pub fn xor_matching(d1: &[u8], d2: &[u8]) -> Vec<u8> {
-    if d1.len() != d2.len() {
-        panic!("data has to have the same length")
-    }
+    assert!(d1.len() == d2.len(), "data has to have the same length");
 
     d1.iter().enumerate().map(|(i, r)| *r ^ d2[i]).collect()
 }
 
+#[expect(
+    clippy::module_name_repetitions,
+    reason = "to keep the operation clear"
+)]
 pub fn xor_single(data: &[u8], operand: u8) -> Vec<u8> {
     data.iter().map(|r| *r ^ operand).collect()
 }
 
+#[expect(
+    clippy::module_name_repetitions,
+    reason = "to keep the operation clear"
+)]
 pub fn xor_repeating(data: &[u8], key: &[u8]) -> Vec<u8> {
-    assert!(!key.is_empty());
+    assert!(!key.is_empty(), "value to xor with cannot be empty");
     data.iter()
         .zip(key.iter().cycle())
         .map(|(d1, d2)| d1 ^ d2)
@@ -55,7 +69,7 @@ pub fn guess_single_xor_key<const C: usize>(
     input: &[u8],
     scorer: impl Fn(&str) -> usize,
 ) -> Option<[Candidate; C]> {
-    assert!(C < u8::MAX as usize);
+    assert!(C < usize::from(u8::MAX), "C cannot be u8::MAX");
 
     let mut candidates = Vec::new();
 
@@ -68,7 +82,7 @@ pub fn guess_single_xor_key<const C: usize>(
                 key: i,
                 text,
                 score,
-            })
+            });
         }
     }
 
